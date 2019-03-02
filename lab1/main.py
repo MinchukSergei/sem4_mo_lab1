@@ -2,20 +2,17 @@ from pathlib import Path
 import cv2
 import numpy as np
 import random
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
 import time
 import sys
 
 
 def main():
-    np.set_printoptions(threshold=sys.maxsize)
-
     root_data_folder = Path('D:/Programming/bsuir/sem4/MO/data')
     small_data = root_data_folder / 'notMNIST_small'
     large_data = root_data_folder / 'notMNIST_large'
 
-    get_unique_data(large_data)
     # prepare_data(small_data)
 
     # task 1
@@ -28,8 +25,25 @@ def main():
     # print_classes_count(large_data)
 
     # task 3
+    images, labels = get_unique_data(small_data)
+    # replace_classes_with_numbers(labels)
+    tr_x, tr_y, te_x, te_y, v_x, v_y = split_data(images, labels, 0.7, 0.2, 0.1, 42)
+
+    # task 4
+    # get_unique_data(large_data)
+
+    # task 5
+    log_reg(tr_x, tr_y, te_x, te_y, v_x, v_y)
 
     pass
+
+
+def log_reg(tr_x, tr_y, te_x, te_y, v_x, v_y):
+    logreg = LogisticRegression(C=0.1, class_weight='balanced', multi_class='multinomial', solver='lbfgs', max_iter=20)
+    tr_sh = tr_x.shape
+    te_sh = te_x.shape
+    logreg.fit(tr_x.reshape(tr_sh[0], -1), tr_y)
+    print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(logreg.score(te_x.reshape(te_sh[0], -1), te_y)))
 
 
 def prepare_data(root_dir):
@@ -76,7 +90,6 @@ def get_unique_data(root_dir):
         unique_data = set()
         unique_indexes = []
 
-        st = time.time()
         for i, (d, l) in enumerate(tqdm(zip(files_data, labels))):
             len_before = len(unique_data)
             unique_data.add(d.tobytes())
@@ -86,12 +99,9 @@ def get_unique_data(root_dir):
                 unique_indexes.append(True)
             else:
                 unique_indexes.append(False)
-        print(time.time() - st)
 
-        print(len(files_data))
         files_data = files_data[unique_indexes]
         classes = labels[unique_indexes]
-        print(len(files_data))
 
         np.savez(prepared_unique_data_path, files_data=files_data, classes=classes)
 
@@ -99,14 +109,50 @@ def get_unique_data(root_dir):
 
 
 def split_data(data, data_labels, train, test, validation, seed, percent=True):
-    random.seed(seed)
+    np.random.seed(seed)
 
     if percent:
-        train = len(data) * train
-        test = len(data) * test
-        validation = len(data) - train - test
+        train = int(len(data) * train)
+        test = int(len(data) * test)
+        validation = int(len(data) - train - test)
 
-    pass
+    data, data_labels = shuffle_both(data, data_labels)
+
+    train_data = data[: train]
+    train_data_labels = data_labels[: train]
+
+    test_data = data[train: train + test]
+    test_data_labels = data_labels[train: train + test]
+
+    validation_data = data[train + test: train + test + validation]
+    validation_data_labels = data_labels[train + test: train + test + validation]
+
+    return train_data, train_data_labels, test_data, test_data_labels, validation_data, validation_data_labels
+
+
+def replace_classes_with_numbers(data_labels):
+    labels = list(set(data_labels))
+    labels_dict = {l: i for (i, l) in enumerate(labels)}
+
+    data_labels_numbers = []
+
+    for l in data_labels:
+        data_labels_numbers.append(labels_dict.get(l))
+
+    return data_labels_numbers
+
+
+def shuffle_both(a, b):
+    shuffled_a = np.empty(a.shape, dtype=a.dtype)
+    shuffled_b = np.empty(b.shape, dtype=b.dtype)
+
+    permutation = np.random.permutation(len(a))
+
+    for old_index, new_index in enumerate(permutation):
+        shuffled_a[new_index] = a[old_index]
+        shuffled_b[new_index] = b[old_index]
+
+    return shuffled_a, shuffled_b
 
 
 def print_classes_count(root_dir):
