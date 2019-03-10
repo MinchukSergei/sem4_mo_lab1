@@ -39,11 +39,16 @@ def main():
 
 
 def log_reg(tr_x, tr_y, te_x, te_y, v_x, v_y):
-    logreg = LogisticRegression(C=0.1, class_weight='balanced', multi_class='multinomial', solver='lbfgs', max_iter=20)
-    tr_sh = tr_x.shape
-    te_sh = te_x.shape
-    logreg.fit(tr_x.reshape(tr_sh[0], -1), tr_y)
-    print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(logreg.score(te_x.reshape(te_sh[0], -1), te_y)))
+    logreg = LogisticRegression(C=0.1, class_weight='balanced', multi_class='multinomial', solver='lbfgs', max_iter=30)
+    tr_x = tr_x.reshape(tr_x.shape[0], -1)
+    te_x = te_x.reshape(te_x.shape[0], -1)
+    v_x = v_x.reshape(v_x.shape[0], -1)
+
+    logreg.fit(tr_x, tr_y)
+
+    print(f'Logistic Regression TRAINING set accuracy: {logreg.score(tr_x, tr_y)}')
+    print(f'Logistic Regression TEST set accuracy: {logreg.score(te_x, te_y)}')
+    print(f'Logistic Regression VALIDATION set accuracy: {logreg.score(v_x, v_y)}')
 
 
 def prepare_data(root_dir):
