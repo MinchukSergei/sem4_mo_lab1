@@ -9,12 +9,11 @@ from tqdm import tqdm
 root_data_folder = Path('D:/Programming/bsuir/sem4/MO/data')
 small_data = root_data_folder / 'notMNIST_small'
 large_data = root_data_folder / 'notMNIST_large'
-one_hot_encoded_labels = {}
 
 
 def main():
     random.seed(42)
-    generate_one_hot_encoded_class()
+    one_hot_encoded_labels = generate_one_hot_encoded_class()
     # prepare_data(small_data)
 
     # task 1
@@ -27,8 +26,8 @@ def main():
 
     # task 3
     images, labels = get_unique_data(small_data)
-    # labels = encode_classes(labels)
-    labels = replace_classes_with_numbers(labels)
+    labels = encode_classes(labels)
+    # labels = replace_classes_with_numbers(labels)
     tr_x, tr_y, te_x, te_y, v_x, v_y = split_data(images, labels, 0.7, 0.2, 0.1, 42)
 
     # task 4
@@ -89,11 +88,14 @@ def prepare_data(root_dir):
 def generate_one_hot_encoded_class():
     a_char = 65
     classes = 10
+    labels = {}
 
     for i, class_name in enumerate(range(a_char, a_char + classes)):
         z = np.zeros((1, classes), dtype=np.int8)
         z[0, i] = 1
-        one_hot_encoded_labels[chr(class_name)] = z
+        labels[chr(class_name)] = z
+
+    return labels
 
 
 def get_unique_data(root_dir):
@@ -161,11 +163,11 @@ def replace_classes_with_numbers(data_labels):
     return np.array(data_labels_numbers)
 
 
-def encode_classes(data_labels):
+def encode_classes(data_labels, one_hot_dict):
     data_labels_numbers = []
 
     for l in data_labels:
-        data_labels_numbers.append(one_hot_encoded_labels[l].flatten())
+        data_labels_numbers.append(one_hot_dict[l].flatten())
 
     return np.array(data_labels_numbers)
 
