@@ -1,32 +1,34 @@
+import random
 from pathlib import Path
+
 import cv2
 import numpy as np
-import random
 from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
-import time
-import sys
+
+root_data_folder = Path('D:/Programming/bsuir/sem4/MO/data')
+small_data = root_data_folder / 'notMNIST_small'
+large_data = root_data_folder / 'notMNIST_large'
+one_hot_encoded_labels = {}
 
 
 def main():
-    root_data_folder = Path('D:/Programming/bsuir/sem4/MO/data')
-    small_data = root_data_folder / 'notMNIST_small'
-    large_data = root_data_folder / 'notMNIST_large'
-
+    random.seed(42)
+    generate_one_hot_encoded_class()
     # prepare_data(small_data)
 
     # task 1
-    # show_rand_image_matrix(large_data, 5, 5, 3)
+    # show_rand_image_matrix(small_data, 5, 5, 3)
 
     # files = get_random_files(small_data, 1000)
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
     # task 2
-    # print_classes_count(large_data)
+    # print_classes_count(small_data)
 
     # task 3
     images, labels = get_unique_data(small_data)
-    # replace_classes_with_numbers(labels)
+    # labels = encode_classes(labels)
+    labels = replace_classes_with_numbers(labels)
     tr_x, tr_y, te_x, te_y, v_x, v_y = split_data(images, labels, 0.7, 0.2, 0.1, 42)
 
     # task 4
@@ -39,7 +41,8 @@ def main():
 
 
 def log_reg(tr_x, tr_y, te_x, te_y, v_x, v_y):
-    logreg = LogisticRegression(C=0.1, class_weight='balanced', multi_class='multinomial', solver='lbfgs', max_iter=30)
+    logreg = LogisticRegression(class_weight='balanced', multi_class='multinomial', solver='lbfgs', max_iter=30)
+
     tr_x = tr_x.reshape(tr_x.shape[0], -1)
     te_x = te_x.reshape(te_x.shape[0], -1)
     v_x = v_x.reshape(v_x.shape[0], -1)
@@ -68,10 +71,11 @@ def prepare_data(root_dir):
         for f in tqdm(files):
             file_name = str(f)
             class_name = file_name.rsplit('\\', 2)[-2]
-            img = cv2.imread(file_name, 1)
+            img = cv2.imread(file_name, 0)
 
             if img is not None:
-                files_data.append(img)
+                norm_image = cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+                files_data.append(norm_image)
                 classes.append(class_name)
 
         files_data = np.array(files_data)
@@ -80,6 +84,16 @@ def prepare_data(root_dir):
         np.savez(prepared_data_path, files_data=files_data, classes=classes)
 
     return files_data, classes
+
+
+def generate_one_hot_encoded_class():
+    a_char = 65
+    classes = 10
+
+    for i, class_name in enumerate(range(a_char, a_char + classes)):
+        z = np.zeros((1, classes), dtype=np.int8)
+        z[0, i] = 1
+        one_hot_encoded_labels[chr(class_name)] = z
 
 
 def get_unique_data(root_dir):
@@ -144,7 +158,16 @@ def replace_classes_with_numbers(data_labels):
     for l in data_labels:
         data_labels_numbers.append(labels_dict.get(l))
 
-    return data_labels_numbers
+    return np.array(data_labels_numbers)
+
+
+def encode_classes(data_labels):
+    data_labels_numbers = []
+
+    for l in data_labels:
+        data_labels_numbers.append(one_hot_encoded_labels[l].flatten())
+
+    return np.array(data_labels_numbers)
 
 
 def shuffle_both(a, b):
@@ -182,7 +205,7 @@ def show_rand_image_matrix(root_dir, rows, cols, scale):
     rand_files_shape = rand_files.shape
 
     rand_files_reshaped = rand_files.reshape(
-        (cols, rows, rand_files_shape[1], rand_files_shape[2], rand_files_shape[3]))
+        (cols, rows, rand_files_shape[1], rand_files_shape[2]))
     image_matrix = np.concatenate(rand_files_reshaped, axis=2)
     image_matrix = np.concatenate(image_matrix, axis=0)
 
@@ -204,10 +227,12 @@ def get_random_files(root_dir, files_number, scale=1):
         if file_name in rand_files_names:
             continue
 
-        img = cv2.imread(file_name, 1)
-        img_scaled_2 = cv2.resize(img, (0, 0), fx=scale, fy=scale)
-        rand_files_names.add(file_name)
-        rand_files.append(img_scaled_2)
+        img = cv2.imread(file_name, 0)
+
+        if img is not None:
+            img_scaled_2 = cv2.resize(img, (0, 0), fx=scale, fy=scale)
+            rand_files_names.add(file_name)
+            rand_files.append(img_scaled_2)
 
     return np.array(rand_files)
 
