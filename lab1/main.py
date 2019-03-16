@@ -73,8 +73,8 @@ def prepare_data(root_dir):
             img = cv2.imread(file_name, 0)
 
             if img is not None:
-                norm_image = cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-                files_data.append(norm_image)
+                # norm_image = cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+                files_data.append(img)
                 classes.append(class_name)
 
         files_data = np.array(files_data)
@@ -130,14 +130,16 @@ def get_unique_data(root_dir):
 
 
 def split_data(data, data_labels, train, test, validation, seed, percent=True):
-    np.random.seed(seed)
+    if seed is not None:
+        np.random.seed(seed)
 
     if percent:
-        train = int(len(data) * train)
-        test = int(len(data) * test)
-        validation = int(len(data) - train - test)
+        data_len = len(data)
+        train = int(data_len * train)
+        test = int(data_len * test)
+        validation = int(data_len - train - test)
 
-    data, data_labels = shuffle_both(data, data_labels)
+    data, data_labels = data_shuffle(data, data_labels, seed)
 
     train_data = data[: train]
     train_data_labels = data_labels[: train]
@@ -172,17 +174,15 @@ def encode_classes(data_labels, one_hot_dict):
     return np.array(data_labels_numbers)
 
 
-def shuffle_both(a, b):
-    shuffled_a = np.empty(a.shape, dtype=a.dtype)
-    shuffled_b = np.empty(b.shape, dtype=b.dtype)
+def data_shuffle(x, y, seed):
+    if seed is not None:
+        np.random.seed(seed)
 
-    permutation = np.random.permutation(len(a))
+    permutation = np.random.permutation(y.shape[0])
+    x_shuffled = x[permutation, :]
+    y_shuffled = y[permutation, :]
 
-    for old_index, new_index in enumerate(permutation):
-        shuffled_a[new_index] = a[old_index]
-        shuffled_b[new_index] = b[old_index]
-
-    return shuffled_a, shuffled_b
+    return x_shuffled, y_shuffled
 
 
 def print_classes_count(root_dir):
