@@ -10,9 +10,12 @@ root_data_folder = Path('D:/Programming/bsuir/sem4/MO/data')
 small_data = root_data_folder / 'notMNIST_small'
 large_data = root_data_folder / 'notMNIST_large'
 
+RND_SEED = 42
+
 
 def main():
-    random.seed(42)
+    np.random.seed(RND_SEED)
+
     one_hot_encoded_labels = generate_one_hot_encoded_class()
     # prepare_data(small_data)
 
@@ -26,9 +29,9 @@ def main():
 
     # task 3
     images, labels = get_unique_data(small_data)
-    labels = encode_classes(labels)
+    labels = encode_classes(labels, one_hot_encoded_labels)
     # labels = replace_classes_with_numbers(labels)
-    tr_x, tr_y, te_x, te_y, v_x, v_y = split_data(images, labels, 0.7, 0.2, 0.1, 42)
+    tr_x, tr_y, te_x, te_y, v_x, v_y = split_data(images, labels, 0.7, 0.2, 0.1)
 
     # task 4
     # get_unique_data(large_data)
@@ -129,17 +132,14 @@ def get_unique_data(root_dir):
     return files_data, classes
 
 
-def split_data(data, data_labels, train, test, validation, seed, percent=True):
-    if seed is not None:
-        np.random.seed(seed)
-
+def split_data(data, data_labels, train, test, validation, percent=True):
     if percent:
         data_len = len(data)
         train = int(data_len * train)
         test = int(data_len * test)
         validation = int(data_len - train - test)
 
-    data, data_labels = data_shuffle(data, data_labels, seed)
+    data, data_labels = data_shuffle(data, data_labels)
 
     train_data = data[: train]
     train_data_labels = data_labels[: train]
@@ -174,11 +174,9 @@ def encode_classes(data_labels, one_hot_dict):
     return np.array(data_labels_numbers)
 
 
-def data_shuffle(x, y, seed):
-    if seed is not None:
-        np.random.seed(seed)
-
+def data_shuffle(x, y):
     permutation = np.random.permutation(y.shape[0])
+
     x_shuffled = x[permutation, :]
     y_shuffled = y[permutation, :]
 
