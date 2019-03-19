@@ -132,25 +132,25 @@ def get_unique_data(root_dir):
     return files_data, classes
 
 
-def split_data(data, data_labels, train, test, validation, percent=True):
+def split_data(data, data_labels, train, validation, test, percent=True):
     if percent:
         data_len = len(data)
         train = int(data_len * train)
-        test = int(data_len * test)
-        validation = int(data_len - train - test)
+        validation = int(data_len * validation)
+        test = int(data_len - train - validation)
 
     data, data_labels = data_shuffle(data, data_labels)
 
     train_data = data[: train]
     train_data_labels = data_labels[: train]
 
-    test_data = data[train: train + test]
-    test_data_labels = data_labels[train: train + test]
+    validation_data = data[train: train + validation]
+    validation_data_labels = data_labels[train: train + validation]
 
-    validation_data = data[train + test: train + test + validation]
-    validation_data_labels = data_labels[train + test: train + test + validation]
+    test_data = data[train + validation: train + validation + test]
+    test_data_labels = data_labels[train + validation: train + validation + test]
 
-    return train_data, train_data_labels, test_data, test_data_labels, validation_data, validation_data_labels
+    return train_data, train_data_labels, validation_data, validation_data_labels, test_data, test_data_labels
 
 
 def replace_classes_with_numbers(data_labels):
