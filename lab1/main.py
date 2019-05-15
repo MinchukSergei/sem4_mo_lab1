@@ -1,5 +1,7 @@
 import random
 from pathlib import Path
+import csv
+import matplotlib.pyplot as plt
 
 import cv2
 import numpy as np
@@ -10,12 +12,10 @@ root_data_folder = Path('D:/Programming/bsuir/sem4/MO/data')
 small_data = root_data_folder / 'notMNIST_small'
 large_data = root_data_folder / 'notMNIST_large'
 
-RND_SEED = 42
+plot_data_path = Path('D:/Programming/bsuir/sem4/MO/lab1/plot/data.csv')
 
 
 def main():
-    np.random.seed(RND_SEED)
-
     one_hot_encoded_labels = generate_one_hot_encoded_class()
     # prepare_data(small_data)
 
@@ -28,10 +28,10 @@ def main():
     # print_classes_count(small_data)
 
     # task 3
-    images, labels = get_unique_data(small_data)
-    labels = encode_classes(labels, one_hot_encoded_labels)
+    images, labels = get_unique_data(large_data)
+    # labels = encode_classes(labels, one_hot_encoded_labels)
     # labels = replace_classes_with_numbers(labels)
-    tr_x, tr_y, te_x, te_y, v_x, v_y = split_data(images, labels, 0.7, 0.2, 0.1)
+    tr_x, tr_y, te_x, te_y, v_x, v_y = split_data(images, labels, 0.8, 0.07, 0.13, percent=True)
 
     # task 4
     # get_unique_data(large_data)
@@ -39,21 +39,59 @@ def main():
     # task 5
     log_reg(tr_x, tr_y, te_x, te_y, v_x, v_y)
 
+    # draw_plot(plot_data_path)
     pass
 
 
-def log_reg(tr_x, tr_y, te_x, te_y, v_x, v_y):
-    logreg = LogisticRegression(class_weight='balanced', multi_class='multinomial', solver='lbfgs', max_iter=30)
+def draw_plot(data_path):
+    with open(data_path) as r:
+        reader = csv.reader(r, delimiter=',')
 
-    tr_x = tr_x.reshape(tr_x.shape[0], -1)
-    te_x = te_x.reshape(te_x.shape[0], -1)
-    v_x = v_x.reshape(v_x.shape[0], -1)
+        train_score = []
+        test_score = []
+        valid_score = []
+        train_size = []
 
-    logreg.fit(tr_x, tr_y)
+        for row in reader:
+            train_size.append(int(row[0]))
+            train_score.append(float(row[1]))
+            test_score.append(float(row[2]))
+            valid_score.append(float(row[3]))
 
-    print(f'Logistic Regression TRAINING set accuracy: {logreg.score(tr_x, tr_y)}')
-    print(f'Logistic Regression TEST set accuracy: {logreg.score(te_x, te_y)}')
-    print(f'Logistic Regression VALIDATION set accuracy: {logreg.score(v_x, v_y)}')
+        train_size = list(train_size)
+        plt.plot(train_size, train_score, label='train', marker='^', color='red')
+        plt.plot(train_size, test_score, label='test', marker='*', color='green')
+        plt.plot(train_size, valid_score, label='valid', marker='x', color='blue')
+        plt.legend()
+        plt.xscale('log')
+        plt.show()
+
+
+def log_reg(tr_x, tr_y, te_x, te_y, v_x, v_y, to_plot=False):
+    for sz in [len(tr_x)]:
+        logreg = LogisticRegression(multi_class='multinomial', solver='sag', max_iter=30)
+
+        tr_x = tr_x.reshape(tr_x.shape[0], -1)
+        te_x = te_x.reshape(te_x.shape[0], -1)
+        v_x = v_x.reshape(v_x.shape[0], -1)
+
+        tr_x_crop = tr_x[: sz]
+        tr_y_crop = tr_y[: sz]
+
+        logreg.fit(tr_x_crop, tr_y_crop)
+
+        train_score = logreg.score(tr_x_crop, tr_y_crop)
+        test_score = logreg.score(te_x, te_y)
+        valid_score = logreg.score(v_x, v_y)
+
+        print(f'Logistic Regression TRAINING set accuracy: {train_score}')
+        print(f'Logistic Regression TEST set accuracy: {test_score}')
+        print(f'Logistic Regression VALIDATION set accuracy: {valid_score}')
+
+        if to_plot:
+            with open(plot_data_path, 'a', newline='') as w:
+                wr = csv.writer(w, delimiter=',')
+                wr.writerow([sz, train_score, test_score, valid_score])
 
 
 def prepare_data(root_dir):
@@ -76,7 +114,6 @@ def prepare_data(root_dir):
             img = cv2.imread(file_name, 0)
 
             if img is not None:
-                # norm_image = cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
                 files_data.append(img)
                 classes.append(class_name)
 
@@ -177,8 +214,8 @@ def encode_classes(data_labels, one_hot_dict):
 def data_shuffle(x, y):
     permutation = np.random.permutation(y.shape[0])
 
-    x_shuffled = x[permutation, :]
-    y_shuffled = y[permutation, :]
+    x_shuffled = x[permutation]
+    y_shuffled = y[permutation]
 
     return x_shuffled, y_shuffled
 
